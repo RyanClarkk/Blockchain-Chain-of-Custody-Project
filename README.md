@@ -10,11 +10,11 @@
 
 - **Group Name:** Group 13
 - **Members:**
-  - Kishan Venkatesan – 1233164870
-  - Olivia Pratt – 1224918357
-  - Zayn Shah – 1222620841
-  - Ryan Clark - 1224137837
-  - Faisal Alyousefi - 1227324880
+  - Ryan Clark
+  - Kishan Venkatesan
+  - Olivia Pratt
+  - Zayn Shah
+  - Faisal Alyousefi
 
 ---
 
