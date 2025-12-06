@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chain of Custody Dapp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      background: #020617;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      margin: 0;
+    }
+    header small {
+      color: #9ca3af;
+    }
+    .btn {
+      background: #22c55e;
+      color: #020617;
+      border: none;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #1d4ed8;
+      color: #e5e7eb;
+    }
+    main {
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .card {
+      background: #020617;
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid #1f2937;
+      box-shadow: 0 10px 15px -3px rgba(15,23,42,0.7);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .card h2 span {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #9ca3af;
+    }
+    .field {
+      margin-bottom: 0.6rem;
+    }
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 0.2rem;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+      box-sizing: border-box;
+    }
+    .field textarea {
+      min-height: 60px;
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .row > * {
+      flex: 1 1 0;
+    }
+    #status {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      max-width: 350px;
+    }
+    #roles {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+    #log {
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      max-height: 400px;
+      overflow-y: auto;
+      background: #020617;
+      border-radius: 0.5rem;
+      border: 1px solid #1f2937;
+      padding: 0.75rem;
+    }
+    .pill {
+      border-radius: 999px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.7rem;
+      border: 1px solid #374151;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Chain of Custody Dapp</h1>
+      <small>Track 2 • Ethereum • ChainOfCustody.sol</small>
+    </div>
+    <div>
+      <button id="connectBtn" class="btn">Connect MetaMask</button>
+      <div id="status"></div>
+      <div id="roles"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>
+        Evidence Operations
+        <span>Creator / Owner actions</span>
+      </h2>
+
+      <div class="field">
+        <label for="caseId">Case ID (bytes16, 0x + UUID without dashes)</label>
+        <input id="caseId" placeholder="0xc84e339e5c0f4f4d84c5bb79a3c1d2a2" />
+      </div>
+
+      <div class="field">
+        <label for="itemIds">Item IDs (comma-separated)</label>
+        <input id="itemIds" placeholder="1004820154,1004820155" />
+      </div>
+
+      <div class="row" style="margin-bottom:0.8rem;">
+        <button id="btnAddBatch" class="btn">Add Evidence (Batch)</button>
+        <button id="btnAddSingle" class="btn btn-secondary">Add One</button>
+      </div>
+
+      <hr style="border-color:#1f2937; margin:0.9rem 0;" />
+
+      <div class="row">
+        <div class="field">
+          <label for="singleItemId">Item ID for checkout / checkin / remove</label>
+          <input id="singleItemId" placeholder="1004820154" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom:0.5rem;">
+        <button id="btnCheckout" class="btn btn-secondary">Checkout</button>
+        <button id="btnCheckin" class="btn btn-secondary">Checkin</button>
+      </div>
+
+      <div class="field">
+        <label for="removeReason">Remove reason (-y reason)</label>
+        <select id="removeReason">
+          <option value="0">NONE (no explicit reason)</option>
+          <option value="1">DISPOSED</option>
+          <option value="2">DESTROYED</option>
+          <option value="3">RELEASED</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ownerInfo">Owner info (-o owner, required for RELEASED)</label>
+        <input id="ownerInfo" placeholder="Lawful owner name / details" />
+      </div>
+      <button id="btnRemove" class="btn" style="margin-bottom:0.5rem;">Remove Item</button>
+    </section>
+
+    <section class="card">
+      <h2>
+        Queries & History
+        <span>Owner / Admin views</span>
+      </h2>
+
+      <div class="row">
+        <button id="btnListCases" class="btn btn-secondary">List Cases</button>
+        <button id="btnListItems" class="btn btn-secondary">List Items for Case</button>
+      </div>
+
+      <div class="row" style="margin-top:0.5rem;">
+        <div class="field">
+          <label for="summaryCaseId">Case ID for Summary</label>
+          <input id="summaryCaseId" placeholder="0xc84e339e5c0f4f4d84c5bb79a3c1d2a2" />
+        </div>
+      </div>
+      <button id="btnSummary" class="btn btn-secondary" style="margin-bottom:0.5rem;">Summary</button>
+
+      <hr style="border-color:#1f2937; margin:0.9rem 0;" />
+
+      <div class="row">
+        <div class="field">
+          <label for="historyItemId">Item ID for History</label>
+          <input id="historyItemId" placeholder="1004820154" />
+        </div>
+        <div class="field">
+          <label for="historyN">num_entries (-n)</label>
+          <input id="historyN" placeholder="0 for all" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="historyReverse">
+          <input type="checkbox" id="historyReverse" />
+          Reverse (-r) – newest first
+        </label>
+      </div>
+
+      <button id="btnHistory" class="btn btn-secondary" style="margin-bottom:0.5rem;">Show History</button>
+
+      <div id="log"></div>
+    </section>
+  </main>
+
+  <!-- Ethers.js UMD build -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+  <script>
+    // ------------- CONFIG: FILL THESE IN -------------
+    // 1) After deploying via Remix (Injected Provider - MetaMask),
+    //    paste your deployed contract address here:
+    const CONTRACT_ADDRESS = "0xd9145CCE52D386f254917e481eB44e9943F39138";
+
+    // 2) Paste the ABI JSON from Remix (Compiler tab -> ABI button)
+    const CONTRACT_ABI = [
+      [
+	{
+		"inputs": [
+			{
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			},
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			}
+		],
+		"name": "addEvidence",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			},
+			{
+				"internalType": "uint32[]",
+				"name": "itemIds",
+				"type": "uint32[]"
+			}
+		],
+		"name": "addEvidenceBatch",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			}
+		],
+		"name": "checkin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			}
+		],
+		"name": "checkout",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantCreator",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantOwner",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			}
+		],
+		"name": "ItemAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "by",
+				"type": "address"
+			}
+		],
+		"name": "ItemCheckedIn",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "by",
+				"type": "address"
+			}
+		],
+		"name": "ItemCheckedOut",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum ChainOfCustody.RemovalReason",
+				"name": "reason",
+				"type": "uint8"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "info",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "by",
+				"type": "address"
+			}
+		],
+		"name": "ItemRemoved",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"internalType": "enum ChainOfCustody.RemovalReason",
+				"name": "reason",
+				"type": "uint8"
+			},
+			{
+				"internalType": "string",
+				"name": "ownerInfo",
+				"type": "string"
+			}
+		],
+		"name": "removeItem",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeCreator",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeOwner",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "role",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "RoleGranted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "role",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "RoleRevoked",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"internalType": "uint256",
+				"name": "n",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "reverse",
+				"type": "bool"
+			}
+		],
+		"name": "getHistory",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "enum ChainOfCustody.ActionType",
+						"name": "action",
+						"type": "uint8"
+					},
+					{
+						"internalType": "enum ChainOfCustody.State",
+						"name": "stateAfter",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "actor",
+						"type": "address"
+					},
+					{
+						"internalType": "enum ChainOfCustody.RemovalReason",
+						"name": "reason",
+						"type": "uint8"
+					},
+					{
+						"internalType": "string",
+						"name": "metadata",
+						"type": "string"
+					}
+				],
+				"internalType": "struct ChainOfCustody.HistoryEntry[]",
+				"name": "out",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			}
+		],
+		"name": "getItem",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "bytes16",
+						"name": "caseId",
+						"type": "bytes16"
+					},
+					{
+						"internalType": "uint32",
+						"name": "itemId",
+						"type": "uint32"
+					},
+					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
+						"internalType": "enum ChainOfCustody.State",
+						"name": "state",
+						"type": "uint8"
+					},
+					{
+						"internalType": "bool",
+						"name": "exists",
+						"type": "bool"
+					}
+				],
+				"internalType": "struct ChainOfCustody.Item",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			}
+		],
+		"name": "historyLength",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isAdmin",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isCreator",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "isOwnerRole",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint32",
+				"name": "",
+				"type": "uint32"
+			}
+		],
+		"name": "items",
+		"outputs": [
+			{
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			},
+			{
+				"internalType": "uint32",
+				"name": "itemId",
+				"type": "uint32"
+			},
+			{
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			},
+			{
+				"internalType": "enum ChainOfCustody.State",
+				"name": "state",
+				"type": "uint8"
+			},
+			{
+				"internalType": "bool",
+				"name": "exists",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "listCases",
+		"outputs": [
+			{
+				"internalType": "bytes16[]",
+				"name": "",
+				"type": "bytes16[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			}
+		],
+		"name": "listItems",
+		"outputs": [
+			{
+				"internalType": "uint32[]",
+				"name": "",
+				"type": "uint32[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes16",
+				"name": "caseId",
+				"type": "bytes16"
+			}
+		],
+		"name": "summary",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "uniqueItems",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "checkedIn",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "checkedOut",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "disposed",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "destroyed",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "released",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "systemCreator",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+    ];
+    // --------------------------------------------------
+
+    let provider = null;
+    let signer = null;
+    let contract = null;
+    let currentAccount = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function log(msg, obj) {
+      const el = $("log");
+      const time = new Date().toISOString().substring(11, 19);
+      let line = "[" + time + "] " + msg;
+      if (obj !== undefined) {
+        line += " " + JSON.stringify(obj, null, 2);
+      }
+      el.textContent = line + "\n" + el.textContent;
+    }
+
+    function setStatus(text) {
+      $("status").textContent = text || "";
+    }
+
+    function setRoles(text) {
+      $("roles").textContent = text || "";
+    }
+
+    async function initContract() {
+      if (!window.ethereum) {
+        alert("MetaMask is required to use this dapp.");
+        return;
+      }
+      provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      currentAccount = accounts[0];
+      signer = await provider.getSigner();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      setStatus("Connected: " + currentAccount);
+      log("Connected wallet", { account: currentAccount });
+
+      await refreshRoles();
+    }
+
+    async function refreshRoles() {
+      if (!contract || !currentAccount) return;
+
+      try {
+        const [admin, creator, owner] = await Promise.all([
+          contract.isAdmin(currentAccount),
+          contract.isCreator(currentAccount),
+          contract.isOwnerRole(currentAccount),
+        ]);
+        const pills = [];
+        if (admin) pills.push("ADMIN");
+        if (creator) pills.push("CREATOR");
+        if (owner) pills.push("OWNER");
+        setRoles(
+          pills.length
+            ? "Roles: " + pills.join(" | ")
+            : "Roles: (none for this address)"
+        );
+        log("Role check", { admin, creator, owner });
+      } catch (err) {
+        console.error(err);
+        log("Error checking roles", { error: err.message || String(err) });
+      }
+    }
+
+    async function ensureReady() {
+      if (!window.ethereum) {
+        alert("MetaMask is not available. Please install it first.");
+        throw new Error("No MetaMask");
+      }
+      if (!contract) {
+        await initContract();
+      }
+    }
+
+    // ---------- Helpers for parsing inputs ----------
+    function parseItemIds(raw) {
+      if (!raw.trim()) return [];
+      return raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .map((s) => {
+          const n = Number(s);
+          if (!Number.isInteger(n) || n < 0) {
+            throw new Error("Invalid itemId: " + s);
+          }
+          return n;
+        });
+    }
+
+    function parseUint(raw, fieldName) {
+      const s = raw.trim();
+      if (!s) throw new Error("Missing " + fieldName);
+      const n = Number(s);
+      if (!Number.isInteger(n) || n < 0) {
+        throw new Error("Invalid " + fieldName + ": " + s);
+      }
+      return n;
+    }
+
+    // ---------- Button handlers ----------
+    $("connectBtn").onclick = async () => {
+      try {
+        await initContract();
+      } catch (err) {
+        console.error(err);
+        log("Error connecting", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnAddBatch").onclick = async () => {
+      try {
+        await ensureReady();
+        const caseId = $("caseId").value.trim();
+        const itemIds = parseItemIds($("itemIds").value);
+
+        if (!caseId) throw new Error("Missing caseId");
+        if (!itemIds.length) throw new Error("No itemIds provided");
+
+        log("Calling addEvidenceBatch", { caseId, itemIds });
+        const tx = await contract.addEvidenceBatch(caseId, itemIds);
+        log("addEvidenceBatch tx submitted", { hash: tx.hash });
+        const receipt = await tx.wait();
+        log("addEvidenceBatch mined", { blockNumber: receipt.blockNumber });
+      } catch (err) {
+        console.error(err);
+        log("Error in addEvidenceBatch", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnAddSingle").onclick = async () => {
+      try {
+        await ensureReady();
+        const caseId = $("caseId").value.trim();
+        const rawItems = parseItemIds($("itemIds").value);
+        if (!caseId) throw new Error("Missing caseId");
+        if (!rawItems.length) throw new Error("Provide at least 1 itemId");
+        const itemId = rawItems[0];
+
+        log("Calling addEvidence", { caseId, itemId });
+        const tx = await contract.addEvidence(caseId, itemId);
+        log("addEvidence tx submitted", { hash: tx.hash });
+        const receipt = await tx.wait();
+        log("addEvidence mined", { blockNumber: receipt.blockNumber });
+      } catch (err) {
+        console.error(err);
+        log("Error in addEvidence", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnCheckout").onclick = async () => {
+      try {
+        await ensureReady();
+        const itemId = parseUint($("singleItemId").value, "itemId");
+        log("Calling checkout", { itemId });
+        const tx = await contract.checkout(itemId);
+        log("checkout tx submitted", { hash: tx.hash });
+        const receipt = await tx.wait();
+        log("checkout mined", { blockNumber: receipt.blockNumber });
+      } catch (err) {
+        console.error(err);
+        log("Error in checkout", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnCheckin").onclick = async () => {
+      try {
+        await ensureReady();
+        const itemId = parseUint($("singleItemId").value, "itemId");
+        log("Calling checkin", { itemId });
+        const tx = await contract.checkin(itemId);
+        log("checkin tx submitted", { hash: tx.hash });
+        const receipt = await tx.wait();
+        log("checkin mined", { blockNumber: receipt.blockNumber });
+      } catch (err) {
+        console.error(err);
+        log("Error in checkin", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnRemove").onclick = async () => {
+      try {
+        await ensureReady();
+        const itemId = parseUint($("singleItemId").value, "itemId");
+        const reason = Number($("removeReason").value);
+        const ownerInfo = $("ownerInfo").value.trim();
+
+        if (reason === 3 && !ownerInfo) {
+          throw new Error("Owner info is required when reason is RELEASED");
+        }
+
+        log("Calling removeItem", { itemId, reason, ownerInfo });
+        const tx = await contract.removeItem(itemId, reason, ownerInfo);
+        log("removeItem tx submitted", { hash: tx.hash });
+        const receipt = await tx.wait();
+        log("removeItem mined", { blockNumber: receipt.blockNumber });
+      } catch (err) {
+        console.error(err);
+        log("Error in removeItem", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnListCases").onclick = async () => {
+      try {
+        await ensureReady();
+        log("Calling listCases...");
+        const cases = await contract.listCases();
+        log("Cases", cases);
+      } catch (err) {
+        console.error(err);
+        log("Error in listCases", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnListItems").onclick = async () => {
+      try {
+        await ensureReady();
+        const caseId = $("caseId").value.trim();
+        if (!caseId) throw new Error("Provide caseId in Case ID field");
+        log("Calling listItems", { caseId });
+        const items = await contract.listItems(caseId);
+        log("Items for case", { caseId, items });
+      } catch (err) {
+        console.error(err);
+        log("Error in listItems", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnSummary").onclick = async () => {
+      try {
+        await ensureReady();
+        const caseId = $("summaryCaseId").value.trim() || $("caseId").value.trim();
+        if (!caseId) throw new Error("Provide caseId for summary");
+        log("Calling summary", { caseId });
+        const res = await contract.summary(caseId);
+        // res is a tuple; convert to readable object
+        const summary = {
+          uniqueItems: Number(res[0]),
+          checkedIn: Number(res[1]),
+          checkedOut: Number(res[2]),
+          disposed: Number(res[3]),
+          destroyed: Number(res[4]),
+          released: Number(res[5]),
+        };
+        log("Summary", { caseId, summary });
+      } catch (err) {
+        console.error(err);
+        log("Error in summary", { error: err.message || String(err) });
+      }
+    };
+
+    $("btnHistory").onclick = async () => {
+      try {
+        await ensureReady();
+        const itemId = parseUint($("historyItemId").value, "itemId");
+        const nRaw = $("historyN").value.trim();
+        const n = nRaw ? parseUint(nRaw, "num_entries") : 0;
+        const reverse = $("historyReverse").checked;
+
+        log("Calling getHistory", { itemId, n, reverse });
+        const entries = await contract.getHistory(itemId, n, reverse);
+        // entries is an array of structs; map to plain objects
+        const normalized = entries.map((e) => ({
+          action: Number(e.action),
+          stateAfter: Number(e.stateAfter),
+          timestamp: Number(e.timestamp),
+          actor: e.actor,
+          reason: Number(e.reason),
+          metadata: e.metadata,
+        }));
+        log("History for item", { itemId, entries: normalized });
+      } catch (err) {
+        console.error(err);
+        log("Error in getHistory", { error: err.message || String(err) });
+      }
+    };
+
+    // Listen for account change from MetaMask and refresh roles
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", async (accounts) => {
+        currentAccount = accounts[0] || null;
+        contract = null;
+        if (currentAccount) {
+          setStatus("Account changed: " + currentAccount);
+          await initContract();
+        } else {
+          setStatus("Disconnected");
+          setRoles("");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
